@@ -50,8 +50,8 @@ Before running this application, make sure you have:
 
    ```env
    # Database
-   DATABASE_URL="postgresql://username:password@localhost:5432/buukeasy"
-   # or for MySQL: DATABASE_URL="mysql://username:password@localhost:3306/buukeasy"
+   DATABASE_URL="postgresql://username:password@localhost:5432/reservix"
+   # or for MySQL: DATABASE_URL="mysql://username:password@localhost:3306/reservix"
 
    #JWT
    JWT_SECRET="your_jwt_secret_here"
@@ -155,7 +155,7 @@ The app automatically processes Ziina webhooks for:
 
 | Variable | Description | Required | Example |
 |----------|-------------|----------|---------|
-| `DATABASE_URL` | Database connection string | ✅ | `postgresql://user:pass@localhost:5432/buukeasy` | 
+| `DATABASE_URL` | Database connection string | ✅ | `postgresql://user:pass@localhost:5432/reservix` | 
 | `JWT_SECRET`   | JWT secret | ✅ | Random string  |
 | `ZIINA_API_URL` | Ziina API base URL | ✅ | `https://api-v2.ziina.com/api` |
 | `ZIINA_API_KEY` | Your Ziina API key | ✅ | `zk_live_...` or `zk_test_...` |
