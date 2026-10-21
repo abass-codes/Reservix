@@ -1,0 +1,261 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                  String               @id @default(cuid())
+  email               String               @unique
+  firstName           String
+  lastName            String
+  phone               String?
+  role                UserRole             @default(ENTREPRENEUR)
+  avatar              String?
+  isVerified          Boolean              @default(false)
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  password            String
+  entrepreneurProfile EntrepreneurProfile?
+
+  @@map("users")
+}
+
+model EntrepreneurProfile {
+  id                   String                @id @default(cuid())
+  userId               String                @unique
+  businessName         String
+  description          String?
+  address              String?
+  city                 String?
+  state                String?
+  zipCode              String?
+  isActive             Boolean               @default(true)
+  isVerified           Boolean               @default(false)
+  averageRating        Float                 @default(0)
+  totalReviews         Int                   @default(0)
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  currency             String?                @default("AED")
+  timezone             String?                @default("Asia/Dubai")
+  slug                 String                @unique
+  bookings             Booking[]
+  user                 User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  notificationSettings NotificationSettings?
+  payments             Payment[]
+  platformSettings     PlatformSettings?
+  portfolioImages      PortfolioImage[]
+  services             Service[]
+  timeSlots            TimeSlot[]
+
+  @@map("entrepreneur_profiles")
+}
+
+model Service {
+  id                     String              @id @default(cuid())
+  entrepreneurId         String
+  name                   String
+  category               ServiceCategory
+  description            String?
+  duration               Int
+  specialInstructions    String?
+  imageUrl               String?
+  
+  // Service location options
+  offersHomeService      Boolean             @default(false)
+  offersInStoreService   Boolean             @default(false)
+  
+  // Home service pricing
+  homeServicePrice       Float?
+  homeServiceDeposit     Float?              @default(0)
+  homeServiceBufferTime  Int                 @default(0)
+  
+  // In-store service pricing  
+  inStoreServicePrice    Float?
+  inStoreServiceDeposit  Float?              @default(0)
+  inStoreServiceBufferTime Int               @default(0)
+  
+  minAdvanceHours        Int                 @default(48)
+  maxAdvanceDays         Int                 @default(30)
+  isActive               Boolean             @default(true)
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
+  
+  bookings               Booking[]
+  entrepreneur           EntrepreneurProfile @relation(fields: [entrepreneurId], references: [id], onDelete: Cascade)
+  
+  @@map("services")
+}
+
+model TimeSlot {
+  id             String              @id @default(cuid())
+  entrepreneurId String
+  dayOfWeek      Int
+  startTime      String
+  endTime        String
+  isActive       Boolean             @default(true)
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  entrepreneur   EntrepreneurProfile @relation(fields: [entrepreneurId], references: [id], onDelete: Cascade)
+
+  @@map("time_slots")
+}
+
+model Booking {
+  id               String              @id @default(cuid())
+  bookingSlug      String?             @unique
+  serviceId        String
+  paymentIntentId  String?
+  appointmentDate  String
+  appointmentTime  String 
+  timezone         String?          
+  status           BookingStatus       @default(PENDING)
+  duration         Int
+  cancelReason     String?
+  cancelledAt      DateTime?
+  confirmedAt      DateTime?
+  completedAt      DateTime?
+  modifiedAt       DateTime?
+  modificationNote String?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  customerEmail    String
+  customerFirstName String
+  customerLastName String
+  customerPhone    String?
+  serviceLocation  String?
+  serviceAddress   String?
+  addressNotes     String?
+  specialRequests  String?
+  entrepreneurId   String
+  entrepreneur     EntrepreneurProfile @relation(fields: [entrepreneurId], references: [id], onDelete: Cascade)
+  service          Service             @relation(fields: [serviceId], references: [id])
+  payment          Payment?            
+
+  @@map("bookings")
+}
+
+model Payment {
+  id               String          @id @default(cuid())
+  bookingId        String          @unique
+  totalAmount      Float
+  depositAmount    Float           // Booking deposit amount (what you process now)
+  serviceAmount    Float           // service price (for reference/future)
+  tipAmount        Float
+  currency         String          @default("AED")
+  paymentType      PaymentType     @default(PLATFORM_FEE)
+  paymentMethod    String          
+  paymentIntentId  String?         
+  transactionId    String?         
+  status           PaymentStatus   @default(PENDING)
+  
+  // Fee Structure (only applied to deposits/platform-processed payments)
+  processingFee    Float?          
+  platformFeeRate  Float           @default(0.05)  // Only on deposits
+  platformFee      Float?          // Only calculated for deposits
+  netAmount        Float?          // What freelancer receives after fees
+  
+  // Extensibility fields
+  isFullPayment    Boolean         @default(false)  
+  description      String?         
+  
+  // Timestamps
+  refundedAt       DateTime?
+  refundAmount     Float?          
+  refundReason     String?       
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  
+  // Relations
+  entrepreneurId   String
+  booking          Booking         @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  entrepreneur     EntrepreneurProfile @relation(fields: [entrepreneurId], references: [id], onDelete: Cascade)
+  
+  @@map("payments")
+}
+
+model PortfolioImage {
+  id             String              @id @default(cuid())
+  entrepreneurId String
+  imageUrl       String
+  caption        String?
+  createdAt      DateTime            @default(now())
+  entrepreneur   EntrepreneurProfile @relation(fields: [entrepreneurId], references: [id], onDelete: Cascade)
+
+  @@map("portfolio_images")
+}
+
+model PlatformSettings {
+  id                    String              @id @default(cuid())
+  platformFeePercentage Float               @default(10.0)
+  minBookingFee         Float               @default(5.0)
+  maxBookingFee         Float               @default(50.0)
+  cancellationWindow    Int                 @default(24)
+  autoConfirmBookings   Boolean             @default(false)
+  maintenanceMode       Boolean             @default(false)
+  updatedAt             DateTime            @updatedAt
+  entrepreneurId        String              @unique
+  entrepreneur          EntrepreneurProfile @relation(fields: [entrepreneurId], references: [id])
+
+  @@map("platform_settings")
+}
+
+model NotificationSettings {
+  id                 String              @id @default(cuid())
+  emailCancellations Boolean             @default(true)
+  smsCancellations   Boolean             @default(false)
+  smsReminders       Boolean             @default(false)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  emailBookings      Boolean             @default(true)
+  emailReminders     Boolean             @default(true)
+  marketingEmails    Boolean             @default(true)
+  smsBookings        Boolean             @default(false)
+  weeklyReports      Boolean             @default(true)
+  entrepreneurId     String              @unique
+  entrepreneur       EntrepreneurProfile @relation(fields: [entrepreneurId], references: [id], onDelete: Cascade)
+
+  @@map("notification_settings")
+}
+
+enum UserRole {
+  ENTREPRENEUR
+  ADMIN
+}
+
+enum ServiceCategory {
+  HAIR_SERVICES
+  NAIL_CARE
+  SKIN_CARE
+  BEAUTY_TREATMENT
+  MASSAGE
+  OTHER
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+  MODIFIED
+  NO_SHOW
+}
+
+enum PaymentType {
+  FULL_PAYMENT
+  DEPOSIT
+  PLATFORM_FEE
+  REMAINING_BALANCE
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  REFUNDED
+  FAILED
+  CANCELLED
+  DISPUTED
+}
